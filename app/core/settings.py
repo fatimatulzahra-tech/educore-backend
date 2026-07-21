@@ -1,0 +1,4 @@
+# app/core/settings.py
+
+CURRENT_ACADEMIC_YEAR = "2026-2027"
+DEFAULT_USER_PASSWORD = "EduCore@123"
