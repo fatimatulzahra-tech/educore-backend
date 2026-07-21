@@ -40,9 +40,7 @@ from fastapi.staticfiles import StaticFiles
 # -------------------------
 Base.metadata.create_all(bind=engine)
 
-db = SessionLocal()
-seed_roles(db)
-db.close()
+
 
 
 # -------------------------
