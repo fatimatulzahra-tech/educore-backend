@@ -73,8 +73,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(TenantMiddleware)
-app.add_middleware(SlowAPIMiddleware)
+# app.add_middleware(TenantMiddleware)
+# app.add_middleware(SlowAPIMiddleware)
 
 
 # -------------------------
