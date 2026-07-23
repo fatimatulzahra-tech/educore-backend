@@ -139,7 +139,7 @@ def verify_email(
 # LOGIN (FIXED RBAC VERSION)
 # -------------------------
 @router.post("/login")
-@limiter.limit("5/minute")
+
 def login(
     request: Request,
     data: LoginRequest,
