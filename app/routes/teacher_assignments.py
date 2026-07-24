@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
+from typing import Optional
 from app.database.database import get_db
 from app.models.class_model import Class
 from app.models.section_model import Section
