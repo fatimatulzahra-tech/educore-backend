@@ -103,7 +103,14 @@ def create_student(
 
         is_verified=True,
 
-        is_first_login=True
+        is_first_login=True,
+        admission_date=data.admission_date,
+
+        date_of_birth=data.date_of_birth,
+
+        parent_name=data.parent_name,
+
+        parent_phone=data.parent_phone,
 
     )
 
@@ -144,31 +151,28 @@ def create_student(
     # -------------------------
 
     student = Student(
+    school_id=current_user.school_id,
+    user_id=user.id,
+    class_id=data.class_id,
+    section_id=data.section_id,
 
-        school_id=current_user.school_id,
+    first_name=data.first_name,
+    last_name=data.last_name,
 
-        user_id=user.id,
+    admission_number=data.admission_number,
+    admission_date=data.admission_date,
 
-        class_id=data.class_id,
+    gender=data.gender,
 
-        section_id=data.section_id,
+    date_of_birth=data.date_of_birth,
 
-        first_name=data.first_name,
+    parent_name=data.parent_name,
+    parent_phone=data.parent_phone,
 
-        last_name=data.last_name,
-
-        admission_number=data.admission_number,
-
-        gender=data.gender,
-
-        email=data.email,
-
-        phone=data.phone,
-
-        address=data.address
-
-    )
-
+    email=data.email,
+    phone=data.phone,
+    address=data.address
+)
     db.add(student)
     db.flush()
 
@@ -270,6 +274,13 @@ def update_student(
     student.email = data.email
     student.phone = data.phone
     student.address = data.address
+    student.admission_date = data.admission_date
+
+    student.date_of_birth = data.date_of_birth
+
+    student.parent_name = data.parent_name
+
+    student.parent_phone = data.parent_phone
 
     db.commit()
 

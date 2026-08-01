@@ -4,7 +4,7 @@ from sqlalchemy import (
     String,
     ForeignKey
 )
-
+from sqlalchemy import Date
 from app.database.database import Base
 
 
@@ -75,3 +75,22 @@ class Student(Base):
     ForeignKey("users.id"),
     nullable=True
     )
+    admission_date = Column(
+        Date,
+        nullable=True
+        )
+    
+    date_of_birth = Column(
+        Date,
+        nullable=True
+        )
+    
+    parent_name = Column(
+        String,
+        nullable=True
+        )
+    
+    parent_phone = Column(
+        String,
+        nullable=True
+       )

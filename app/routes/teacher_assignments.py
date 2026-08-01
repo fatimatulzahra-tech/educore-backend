@@ -1,230 +1,242 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import Optional
+
 from app.database.database import get_db
+
+from app.models.teacher_assignment_model import TeacherAssignment
+from app.models.teacher_model import Teacher
 from app.models.class_model import Class
 from app.models.section_model import Section
 from app.models.student_model import Student
-from app.models.teacher_assignment_model import (
-    TeacherAssignment
+
+from app.schemas.teacher_assignment_schema import (
+    TeacherAssignmentCreate,
 )
 
-from app.models.teacher_model import Teacher
-
 from app.dependencies.permission_dependencies import (
-    require_permission
+    require_permission,
 )
 
 router = APIRouter(
     prefix="/teacher-assignments",
-    tags=["Teacher Assignments"]
+    tags=["Teacher Assignments"],
 )
 
-# ASSIGN TEACHER
+
+# ---------------------------------------------------
+# CREATE ASSIGNMENTS
+# ---------------------------------------------------
 
 @router.post("/")
 def assign_teacher(
-    teacher_id: int,
-    class_id: int,
-    section_id: int,
-    subject: str,
-
+    data: TeacherAssignmentCreate,
     db: Session = Depends(get_db),
-
     current_user=Depends(
-        require_permission(
-            "manage_students"
-        )
-    )
+        require_permission("manage_students")
+    ),
 ):
 
-    assignment = TeacherAssignment(
-        school_id=current_user.school_id,
+    created = []
 
-        teacher_id=teacher_id,
+    for item in data.assignments:
 
-        class_id=class_id,
+        assignment = TeacherAssignment(
+            school_id=current_user.school_id,
+            teacher_id=data.teacher_id,
+            class_id=item.class_id,
+            section_id=item.section_id,
+            subject=item.subject,
+        )
 
-        section_id=section_id,
-
-        subject=subject
-    )
-
-    db.add(assignment)
+        db.add(assignment)
+        created.append(assignment)
 
     db.commit()
 
-    db.refresh(assignment)
-
     return {
-        "message":
-        "Teacher assigned successfully",
-
-        "assignment":
-        assignment
+        "message": "Teacher assignments created successfully",
+        "count": len(created),
     }
 
 
-# GET ALL ASSIGNMENTS
+# ---------------------------------------------------
+# GET ALL
+# ---------------------------------------------------
 
 @router.get("/")
 def get_assignments(
     db: Session = Depends(get_db),
-
     current_user=Depends(
-        require_permission(
-            "view_students"
-        )
-    )
+        require_permission("view_students")
+    ),
 ):
 
-    assignments = db.query(
-        TeacherAssignment
-    ).filter(
-
-        TeacherAssignment.school_id ==
-        current_user.school_id
-
-    ).all()
-
-    return assignments
+    return (
+        db.query(TeacherAssignment)
+        .filter(
+            TeacherAssignment.school_id == current_user.school_id
+        )
+        .all()
+    )
 
 
-# GET MY CLASSES (TEACHER)
+# ---------------------------------------------------
+# UPDATE
+# ---------------------------------------------------
 
-# GET MY CLASSES (TEACHER)
+@router.put("/{assignment_id}")
+def update_assignment(
+    assignment_id: int,
+    data: TeacherAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("manage_students")
+    ),
+):
+
+    assignment = (
+        db.query(TeacherAssignment)
+        .filter(
+            TeacherAssignment.id == assignment_id,
+            TeacherAssignment.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found",
+        )
+
+    if len(data.assignments) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No assignment supplied",
+        )
+
+    item = data.assignments[0]
+
+    assignment.teacher_id = data.teacher_id
+    assignment.class_id = item.class_id
+    assignment.section_id = item.section_id
+    assignment.subject = item.subject
+
+    db.commit()
+    db.refresh(assignment)
+
+    return {
+        "message": "Assignment updated successfully",
+        "assignment": assignment,
+    }
+
+
+# ---------------------------------------------------
+# DELETE
+# ---------------------------------------------------
+
+@router.delete("/{assignment_id}")
+def delete_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("manage_students")
+    ),
+):
+
+    assignment = (
+        db.query(TeacherAssignment)
+        .filter(
+            TeacherAssignment.id == assignment_id,
+            TeacherAssignment.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Assignment not found",
+        )
+
+    db.delete(assignment)
+    db.commit()
+
+    return {
+        "message": "Assignment deleted successfully"
+    }
+
+
+# ---------------------------------------------------
+# MY CLASSES
+# ---------------------------------------------------
 
 @router.get("/my-classes")
 def my_classes(
-
     db: Session = Depends(get_db),
-
     current_user=Depends(
-        require_permission(
-            "view_students"
-        )
-    )
-
+        require_permission("view_students")
+    ),
 ):
 
-    teacher = db.query(
-        Teacher
-    ).filter(
-
-        Teacher.school_id ==
-        current_user.school_id,
-
-        Teacher.email ==
-        current_user.email
-
-    ).first()
+    teacher = (
+        db.query(Teacher)
+        .filter(
+            Teacher.school_id == current_user.school_id,
+            Teacher.email == current_user.email,
+        )
+        .first()
+    )
 
     if not teacher:
         return []
 
-    assignments = db.query(
-        TeacherAssignment
-    ).filter(
-
-        TeacherAssignment.school_id ==
-        current_user.school_id,
-
-        TeacherAssignment.teacher_id ==
-        teacher.id
-
-    ).all()
+    assignments = (
+        db.query(TeacherAssignment)
+        .filter(
+            TeacherAssignment.school_id == current_user.school_id,
+            TeacherAssignment.teacher_id == teacher.id,
+        )
+        .all()
+    )
 
     result = []
 
     for assignment in assignments:
 
-        class_obj = db.query(Class).filter(
-            Class.id == assignment.class_id
-        ).first()
+        cls = (
+            db.query(Class)
+            .filter(Class.id == assignment.class_id)
+            .first()
+        )
 
-        section_obj = db.query(Section).filter(
-            Section.id == assignment.section_id
-        ).first()
+        section = (
+            db.query(Section)
+            .filter(Section.id == assignment.section_id)
+            .first()
+        )
 
-        student_count = db.query(Student).filter(
+        students = (
+            db.query(Student)
+            .filter(
+                Student.school_id == current_user.school_id,
+                Student.class_id == assignment.class_id,
+                Student.section_id == assignment.section_id,
+            )
+            .count()
+        )
 
-            Student.school_id == current_user.school_id,
-
-            Student.class_id == assignment.class_id,
-
-            Student.section_id == assignment.section_id
-
-        ).count()
-
-        result.append({
-
-            "id": assignment.id,
-
-            "teacher_id": assignment.teacher_id,
-
-            "subject": assignment.subject,
-
-            "class_id": assignment.class_id,
-
-            "class_name": class_obj.name if class_obj else "",
-
-            "section_id": assignment.section_id,
-
-            "section_name": section_obj.name if section_obj else "",
-
-            "student_count": student_count
-
-        })
+        result.append(
+            {
+                "id": assignment.id,
+                "teacher_id": assignment.teacher_id,
+                "subject": assignment.subject,
+                "class_id": assignment.class_id,
+                "class_name": cls.name if cls else "",
+                "section_id": assignment.section_id,
+                "section_name": section.name if section else "",
+                "student_count": students,
+            }
+        )
 
     return result
-
-@router.put("/{assignment_id}")
-def update_assignment(
-    assignment_id: int,
-    teacher_id: int,
-    class_id: int,
-    section_id: int,
-    subject: str,
-
-    db: Session = Depends(get_db),
-
-    current_user=Depends(
-        require_permission(
-            "manage_students"
-        )
-    )
-):
-
-    assignment = db.query(
-        TeacherAssignment
-    ).filter(
-
-        TeacherAssignment.id == assignment_id,
-
-        TeacherAssignment.school_id ==
-        current_user.school_id
-
-    ).first()
-
-    if not assignment:
-
-        return {
-            "message":
-            "Assignment not found"
-        }
-
-    assignment.teacher_id = teacher_id
-    assignment.class_id = class_id
-    assignment.section_id = section_id
-    assignment.subject = subject
-
-    db.commit()
-    db.refresh(assignment)
-
-    return {
-        "message":
-        "Assignment updated successfully",
-
-        "assignment":
-        assignment
-    }

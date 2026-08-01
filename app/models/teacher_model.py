@@ -7,6 +7,7 @@ from sqlalchemy import (
 
 from app.database.database import Base
 from sqlalchemy import Integer, ForeignKey
+from sqlalchemy import Date, Float
 
 class Teacher(Base):
 
@@ -53,4 +54,28 @@ class Teacher(Base):
     Integer,
     ForeignKey("users.id"),
     nullable=True  # keep nullable for backward compatibility
+    )
+    qualification = Column(
+    String,
+    nullable=True
+    )
+
+    experience = Column(
+    Integer,
+    nullable=True
+    )
+
+    salary = Column(
+    Float,
+    nullable=True
+    )
+
+    joining_date = Column(
+    Date,
+    nullable=True
+    )
+
+    employment_type = Column(
+    String,
+    nullable=True
     )

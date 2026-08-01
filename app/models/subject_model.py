@@ -31,5 +31,10 @@ class Subject(Base):
 
     code = Column(
         String,
-        nullable=False
+        nullable=True
+    )
+    class_id = Column(
+    Integer,
+    ForeignKey("classes.id"),
+    nullable=False
     )

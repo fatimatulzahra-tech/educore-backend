@@ -42,7 +42,8 @@ class TeacherAssignment(Base):
         nullable=False
     )
 
-    subject = Column(
-        String,
-        nullable=False
-    )
+    subject_id = Column(
+    Integer,
+    ForeignKey("subjects.id"),
+    nullable=False
+)

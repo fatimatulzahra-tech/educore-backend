@@ -33,7 +33,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
+from app.routes import subjects
 
 # -------------------------
 # DB INIT
@@ -97,6 +97,7 @@ app.include_router(teachers_router)
 app.include_router(teacher_assignments_router)
 app.include_router(results.router)
 app.include_router(payments_router)
+app.include_router(subjects.router)
 router = APIRouter(
     prefix="/accountants"
 )

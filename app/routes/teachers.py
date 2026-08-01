@@ -87,14 +87,23 @@ def create_teacher(
     # CREATE TEACHER PROFILE
     # -----------------------------
     teacher = Teacher(
-        school_id=current_user.school_id,
-        user_id=user.id,
-        first_name=data.first_name,
-        last_name=data.last_name,
-        email=data.email,
-        phone=data.phone,
-        subject=data.subject
-    )
+    school_id=current_user.school_id,
+    user_id=user.id,
+
+    first_name=data.first_name,
+    last_name=data.last_name,
+
+    email=data.email,
+    phone=data.phone,
+
+    subject=data.subject,
+
+    qualification=data.qualification,
+    experience=data.experience,
+    salary=data.salary,
+    joining_date=data.joining_date,
+    employment_type=data.employment_type,
+   )
 
     db.add(teacher)
     db.commit()
@@ -152,7 +161,13 @@ def get_teachers(
 
             "phone": teacher.phone,
 
-            "subject": teacher.subject
+            "subject": teacher.subject,
+
+            "qualification": teacher.qualification,
+            "experience": teacher.experience,
+            "salary": teacher.salary,
+            "joining_date": teacher.joining_date,
+            "employment_type": teacher.employment_type,
 
         })
 
@@ -253,6 +268,11 @@ def update_teacher(
     teacher.last_name = data.last_name
     teacher.phone = data.phone
     teacher.subject = data.subject
+    teacher.qualification = data.qualification
+    teacher.experience = data.experience
+    teacher.salary = data.salary
+    teacher.joining_date = data.joining_date
+    teacher.employment_type = data.employment_type
 
     db.commit()
 
