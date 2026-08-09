@@ -67,7 +67,7 @@ def create_subject(
             status_code=404,
             detail="Class not found"
         )
-
+    subject_name = data.name.strip()
     subject_query = db.query(Subject)
 
     subject_query = apply_tenant_filter(
@@ -78,7 +78,7 @@ def create_subject(
 
     existing_subject = subject_query.filter(
         Subject.class_id == data.class_id,
-        Subject.name == data.name
+        Subject.name == subject_name
     ).first()
 
     if existing_subject:
@@ -94,7 +94,7 @@ def create_subject(
 
         class_id=data.class_id,
 
-        name=data.name,
+        name=subject_name,
 
         code=None
 
