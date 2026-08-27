@@ -3,14 +3,13 @@ from sqlalchemy import (
     Integer,
     Float,
     String,
+    Date,
     ForeignKey
 )
-
 from app.database.database import Base
 
 
 class Payment(Base):
-
     __tablename__ = "payments"
 
     id = Column(
@@ -39,4 +38,9 @@ class Payment(Base):
     payment_method = Column(
         String,
         nullable=False
+    )
+
+    payment_date = Column(
+        Date,
+        nullable=True
     )

@@ -20,7 +20,6 @@ from app.models.mark_model import Mark
 from app.models.student_model import Student
 
 from app.schemas.exam_schema import (
-    SubjectCreate,
     ExamCreate,
     MarkCreate
 )
@@ -38,57 +37,28 @@ router = APIRouter(
 )
 
 
-# ----------------------------
-# CREATE SUBJECT
-# ----------------------------
+def serialize_exam(exam: Exam) -> dict:
+    return {
+        "id": exam.id,
+        "school_id": exam.school_id,
+        "title": exam.title,
+        "class_id": exam.class_id,
+        "section_id": exam.section_id,
+        "subject_id": exam.subject_id,
+        "total_marks": exam.total_marks,
+    }
 
-@router.post("/subjects")
-def create_subject(
 
-    data: SubjectCreate,
-
-    db: Session = Depends(get_db),
-
-    current_user=Depends(
-        require_permission(
-            "manage_exams"
-        )
-    )
-
-):
-
-    existing = db.query(Subject).filter(
-
-        Subject.school_id == current_user.school_id,
-
-        Subject.name == data.name
-
-    ).first()
-
-    if existing:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Subject already exists"
-        )
-
-    subject = Subject(
-
-        school_id=current_user.school_id,
-
-        name=data.name,
-
-        code=data.code
-
-    )
-
-    db.add(subject)
-
-    db.commit()
-
-    db.refresh(subject)
-
-    return subject
+def serialize_mark(mark: Mark) -> dict:
+    return {
+        "id": mark.id,
+        "school_id": mark.school_id,
+        "student_id": mark.student_id,
+        "exam_id": mark.exam_id,
+        "subject_id": mark.subject_id,
+        "obtained_marks": mark.obtained_marks,
+        "total_marks": mark.total_marks,
+    }
 
 
 # ----------------------------
@@ -172,7 +142,10 @@ def create_exam(
 
     db.refresh(exam)
 
-    return exam
+    return serialize_exam(exam)
+
+
+# ----------------------------
 # ADD MARKS
 # ----------------------------
 
@@ -271,9 +244,11 @@ def add_marks(
     db.refresh(mark)
 
 
-    return mark
+    return serialize_mark(mark)
+
+
 # ----------------------------
-# GET SUBJECTS
+# GET SUBJECTS (kept for backward compat with any existing callers)
 # ----------------------------
 
 @router.get("/subjects")
@@ -301,111 +276,22 @@ def get_subjects(
 
     )
 
-    return query.order_by(
+    subjects = query.order_by(
         Subject.name
     ).all()
 
-
-# ----------------------------
-# GET MARKS
-# ----------------------------
-
-@router.post("/marks")
-def add_marks(
-
-    data: MarkCreate,
-
-    db: Session = Depends(get_db),
-
-    current_user=Depends(
-        require_permission(
-            "manage_exams"
-        )
-    )
-
-):
-
-    student = db.query(
-        Student
-    ).filter(
-
-        Student.id == data.student_id,
-
-        Student.school_id == current_user.school_id
-
-    ).first()
+    return [
+        {
+            "id": s.id,
+            "school_id": s.school_id,
+            "class_id": s.class_id,
+            "name": s.name,
+            "code": s.code,
+        }
+        for s in subjects
+    ]
 
 
-    if not student:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-
-    if data.obtained_marks < 0:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid marks"
-        )
-
-
-    if data.obtained_marks > data.total_marks:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Obtained marks cannot exceed total marks"
-        )
-
-
-    existing = db.query(Mark).filter(
-
-        Mark.school_id == current_user.school_id,
-
-        Mark.exam_id == data.exam_id,
-
-        Mark.student_id == data.student_id,
-
-        Mark.subject_id == data.subject_id
-
-    ).first()
-
-
-    if existing:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Marks already entered"
-        )
-
-
-    mark = Mark(
-
-        school_id=current_user.school_id,
-
-        student_id=data.student_id,
-
-        exam_id=data.exam_id,
-
-        subject_id=data.subject_id,
-
-        obtained_marks=data.obtained_marks,
-
-        total_marks=data.total_marks
-
-    )
-
-
-    db.add(mark)
-
-    db.commit()
-
-    db.refresh(mark)
-
-
-    return mark
 # ----------------------------
 # GET EXAMS
 # ----------------------------
@@ -451,9 +337,13 @@ def get_exams(
             Exam.section_id == section_id
         )
 
-    return query.all()
-#  ----------------------------
-# GET SINGLE EXAM
+    exams = query.all()
+
+    return [serialize_exam(e) for e in exams]
+
+
+# ----------------------------
+# TEACHER'S EXAMS (FOR THEIR ASSIGNED CLASSES)
 # ----------------------------
 @router.get("/teacher")
 def teacher_exams(
@@ -510,10 +400,6 @@ def teacher_exams(
 
         exams = (
             db.query(Exam)
-            .join(
-                Subject,
-                Exam.subject_id == Subject.id
-            )
             .filter(
 
                 Exam.school_id ==
@@ -525,8 +411,8 @@ def teacher_exams(
                 Exam.section_id ==
                 assignment.section_id,
 
-                Subject.name ==
-                assignment.subject
+                Exam.subject_id ==
+                assignment.subject_id
 
             )
             .all()
@@ -896,12 +782,6 @@ def student_my_exams(
     return exams
 
 
-
-
-
-
-
-
 @router.get("/student/results")
 def student_results(
 
@@ -935,107 +815,30 @@ def student_results(
     ).all()
 
 
-    return [
-        {
-            "id": mark.id,
-            "exam_id": mark.exam_id,
-            "subject_id": mark.subject_id,
-            "obtained_marks": mark.obtained_marks,
-            "total_marks": mark.total_marks
-        }
-        for mark in results
-    ]
+    output = []
 
-@router.get("/student/results")
-def student_results(
-
-    db: Session = Depends(get_db),
-
-    current_user=Depends(
-        require_permission("view_exams")
-    )
-
-):
-
-    student = db.query(Student).filter(
-
-        Student.school_id == current_user.school_id,
-
-        Student.user_id == current_user.id
-
-    ).first()
-
-
-    if not student:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Student profile not found"
-        )
-
-
-    enrollments = db.query(Enrollment).filter(
-
-        Enrollment.school_id == current_user.school_id,
-
-        Enrollment.student_id == student.id
-
-    ).all()
-
-
-    enrollment_ids = [
-        e.id for e in enrollments
-    ]
-
-
-    marks = db.query(Mark).filter(
-
-        Mark.school_id == current_user.school_id,
-
-        Mark.enrollment_id.in_(enrollment_ids)
-
-    ).all()
-
-
-    results = []
-
-
-    for mark in marks:
+    for mark in results:
 
         subject = db.query(Subject).filter(
             Subject.id == mark.subject_id
         ).first()
 
-
         exam = db.query(Exam).filter(
             Exam.id == mark.exam_id
         ).first()
 
-
-        results.append({
-
+        output.append({
             "id": mark.id,
-
-            "subject":
-                subject.name
-                if subject
-                else "",
-
-            "exam":
-                exam.title
-                if exam
-                else "",
-
-            "obtained_marks":
-                mark.obtained_marks,
-
-            "total_marks":
-                mark.total_marks
-
+            "exam_id": mark.exam_id,
+            "exam_title": exam.title if exam else "",
+            "subject_id": mark.subject_id,
+            "subject_name": subject.name if subject else "",
+            "obtained_marks": mark.obtained_marks,
+            "total_marks": mark.total_marks
         })
 
+    return output
 
-    return results
 
 @router.get("/{exam_id}")
 def get_exam(
@@ -1104,6 +907,3 @@ def get_exam(
         "total_marks": exam_data.total_marks
 
     }
-
-
-

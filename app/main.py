@@ -34,7 +34,9 @@ from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routes import subjects
-
+from app.routes.staff import router as staff_router
+from app.routes.employee_attendance import router as employee_attendance_router
+from app.routes.transactions import router as transactions_router
 # -------------------------
 # DB INIT
 # -------------------------
@@ -98,6 +100,10 @@ app.include_router(teacher_assignments_router)
 app.include_router(results.router)
 app.include_router(payments_router)
 app.include_router(subjects.router)
+app.include_router(staff_router)
+app.include_router(employee_attendance_router)
+app.include_router(transactions_router)
+
 router = APIRouter(
     prefix="/accountants"
 )

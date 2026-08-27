@@ -47,7 +47,7 @@ def create_teacher(
 
         user = User(
             email=data.email,
-            hashed_password=hash_password(DEFAULT_USER_PASSWORD),
+            hashed_password=hash_password(temp_password),
             school_id=current_user.school_id,
             role="teacher",
             is_verified=True,
@@ -111,7 +111,7 @@ def create_teacher(
 
     return {
         "message": "Teacher created successfully",
-        "temp_password": DEFAULT_USER_PASSWORD,
+        "temp_password": temp_password,
         "teacher": {
             "id": teacher.id,
             "email": teacher.email,

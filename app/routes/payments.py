@@ -6,10 +6,14 @@ from fastapi import (
 )
 
 from sqlalchemy.orm import Session
+from datetime import date as date_type
 
 from app.database.database import get_db
 
 from app.models.payment_model import Payment
+from app.models.student_fee_model import StudentFee
+from app.models.enrollment_model import Enrollment
+from app.models.student_model import Student
 
 from app.schemas.payment_schema import (
     PaymentCreate
@@ -28,6 +32,38 @@ router = APIRouter(
 )
 
 
+def serialize_payment(payment: Payment) -> dict:
+    return {
+        "id": payment.id,
+        "school_id": payment.school_id,
+        "student_fee_id": payment.student_fee_id,
+        "amount_paid": payment.amount_paid,
+        "payment_method": payment.payment_method,
+        "payment_date": payment.payment_date,
+    }
+
+
+def get_student_id_for_fee(db: Session, student_fee_id: int):
+    """Derive student via StudentFee -> Enrollment -> Student, since
+    Payment only stores student_fee_id, not student_id directly."""
+
+    student_fee = db.query(StudentFee).filter(
+        StudentFee.id == student_fee_id
+    ).first()
+
+    if not student_fee:
+        return None
+
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.id == student_fee.enrollment_id
+    ).first()
+
+    if not enrollment:
+        return None
+
+    return enrollment.student_id
+
+
 # CREATE PAYMENT
 
 @router.post("/")
@@ -39,33 +75,46 @@ def create_payment(
 
     current_user=Depends(
         require_permission(
-            "manage_students"
+            "manage_finance"
         )
     )
 
 ):
 
+    student_fee = db.query(StudentFee).filter(
+        StudentFee.id == data.student_fee_id,
+        StudentFee.school_id == current_user.school_id
+    ).first()
+
+    if not student_fee:
+        raise HTTPException(
+            status_code=404,
+            detail="Student fee not found"
+        )
+
     payment = Payment(
 
         school_id=current_user.school_id,
 
-        student_id=data.student_id,
+        student_fee_id=data.student_fee_id,
 
         amount_paid=data.amount_paid,
 
         payment_method=data.payment_method,
 
-        payment_date=data.payment_date
+        payment_date=data.payment_date or date_type.today()
 
     )
 
     db.add(payment)
 
+    student_fee.status = "paid"
+
     db.commit()
 
     db.refresh(payment)
 
-    return payment
+    return serialize_payment(payment)
 
 
 # GET ALL PAYMENTS
@@ -88,7 +137,7 @@ def get_payments(
 
     current_user=Depends(
         require_permission(
-            "view_students"
+            "view_finance"
         )
     )
 
@@ -124,9 +173,10 @@ def get_payments(
 
         "total": total,
 
-        "data": payments
+        "data": [serialize_payment(p) for p in payments]
 
     }
+
 
 @router.get("/summary")
 def payment_summary(
@@ -135,7 +185,7 @@ def payment_summary(
 
     current_user=Depends(
         require_permission(
-            "view_students"
+            "view_finance"
         )
     )
 
@@ -171,6 +221,7 @@ def payment_summary(
 
     }
 
+
 # STUDENT PAYMENT HISTORY
 
 @router.get("/student/{student_id}")
@@ -182,7 +233,7 @@ def student_payments(
 
     current_user=Depends(
         require_permission(
-            "view_students"
+            "view_finance"
         )
     )
 
@@ -200,13 +251,20 @@ def student_payments(
 
     )
 
-    payments = query.filter(
+    all_payments = query.all()
 
-        Payment.student_id == student_id
+    matching = []
 
-    ).all()
+    for payment in all_payments:
 
-    return payments
+        resolved_student_id = get_student_id_for_fee(
+            db, payment.student_fee_id
+        )
+
+        if resolved_student_id == student_id:
+            matching.append(serialize_payment(payment))
+
+    return matching
 
 
 # COLLECTION SUMMARY
@@ -218,17 +276,17 @@ def collection(
 
     current_user=Depends(
         require_permission(
-            "view_students"
+            "view_finance"
         )
     )
 
 ):
 
-    query=db.query(
+    query = db.query(
         Payment
     )
 
-    query=apply_tenant_filter(
+    query = apply_tenant_filter(
 
         query=query,
 
@@ -238,9 +296,9 @@ def collection(
 
     )
 
-    payments=query.all()
+    payments = query.all()
 
-    total=sum(
+    total = sum(
 
         payment.amount_paid
 
@@ -248,15 +306,16 @@ def collection(
 
     )
 
-    return{
+    return {
 
-        "total_collection":total,
+        "total_collection": total,
 
         "total_transactions":
 
         len(payments)
 
     }
+
 
 # GET SINGLE PAYMENT
 
@@ -269,7 +328,7 @@ def get_payment(
 
     current_user=Depends(
         require_permission(
-            "view_students"
+            "view_finance"
         )
     )
 
@@ -303,6 +362,4 @@ def get_payment(
 
         )
 
-    return payment
-
-
+    return serialize_payment(payment)

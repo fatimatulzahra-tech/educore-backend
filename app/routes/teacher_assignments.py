@@ -8,6 +8,7 @@ from app.models.teacher_model import Teacher
 from app.models.class_model import Class
 from app.models.section_model import Section
 from app.models.student_model import Student
+from app.models.subject_model import Subject
 
 from app.schemas.teacher_assignment_schema import (
     TeacherAssignmentCreate,
@@ -45,7 +46,7 @@ def assign_teacher(
             teacher_id=data.teacher_id,
             class_id=item.class_id,
             section_id=item.section_id,
-            subject=item.subject,
+            subject_id=item.subject_id,
         )
 
         db.add(assignment)
@@ -71,13 +72,24 @@ def get_assignments(
     ),
 ):
 
-    return (
+    assignments = (
         db.query(TeacherAssignment)
         .filter(
             TeacherAssignment.school_id == current_user.school_id
         )
         .all()
     )
+
+    return [
+        {
+            "id": a.id,
+            "teacher_id": a.teacher_id,
+            "class_id": a.class_id,
+            "section_id": a.section_id,
+            "subject_id": a.subject_id,
+        }
+        for a in assignments
+    ]
 
 
 # ---------------------------------------------------
@@ -120,7 +132,7 @@ def update_assignment(
     assignment.teacher_id = data.teacher_id
     assignment.class_id = item.class_id
     assignment.section_id = item.section_id
-    assignment.subject = item.subject
+    assignment.subject_id = item.subject_id
 
     db.commit()
     db.refresh(assignment)
@@ -216,6 +228,12 @@ def my_classes(
             .first()
         )
 
+        subject = (
+            db.query(Subject)
+            .filter(Subject.id == assignment.subject_id)
+            .first()
+        )
+
         students = (
             db.query(Student)
             .filter(
@@ -230,7 +248,8 @@ def my_classes(
             {
                 "id": assignment.id,
                 "teacher_id": assignment.teacher_id,
-                "subject": assignment.subject,
+                "subject_id": assignment.subject_id,
+                "subject_name": subject.name if subject else "",
                 "class_id": assignment.class_id,
                 "class_name": cls.name if cls else "",
                 "section_id": assignment.section_id,

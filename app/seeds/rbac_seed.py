@@ -22,52 +22,47 @@ DEFAULT_PERMISSIONS = [
 DEFAULT_ROLES = {
 
     "principal": [
-
         "manage_students",
         "view_students",
-
         "manage_teachers",
         "view_teachers",
-
-        
         "view_attendance",
-
         "manage_finance",
         "view_finance",
-
         "manage_exams",
         "view_exams",
-
         "manage_announcements"
     ],
 
-    "teacher": [
+        "teacher": [
 
         "view_students",
 
         "mark_attendance",
         "view_attendance",
 
+        "manage_exams",
         "view_exams"
     ],
 
     "accountant": [
-
         "manage_finance",
         "view_finance"
     ],
 
     "student": [
-
         "view_exams",
         "view_attendance",
         "view_finance"
     ],
 
     "parent": [
-
         "view_attendance",
         "view_exams"
+    ],
+
+    "staff": [
+        "view_attendance"
     ]
 }
 

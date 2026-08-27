@@ -38,7 +38,30 @@ router = APIRouter(
 )
 
 
-# CREATE STUDENT
+# -------------------------
+# SERIALIZATION HELPER
+# -------------------------
+def serialize_student(student: Student) -> dict:
+    return {
+        "id": student.id,
+        "school_id": student.school_id,
+        "user_id": student.user_id,
+        "class_id": student.class_id,
+        "section_id": student.section_id,
+        "first_name": student.first_name,
+        "last_name": student.last_name,
+        "admission_number": student.admission_number,
+        "admission_date": student.admission_date,
+        "gender": student.gender,
+        "date_of_birth": student.date_of_birth,
+        "parent_name": student.parent_name,
+        "parent_phone": student.parent_phone,
+        "email": student.email,
+        "phone": student.phone,
+        "address": student.address,
+    }
+
+
 # -------------------------
 # CREATE STUDENT
 # -------------------------
@@ -97,20 +120,13 @@ def create_student(
 
         email=data.email,
 
-        hashed_password=hash_password(DEFAULT_USER_PASSWORD),
+        hashed_password=hash_password(temporary_password),
 
         role="student",
 
         is_verified=True,
 
         is_first_login=True,
-        admission_date=data.admission_date,
-
-        date_of_birth=data.date_of_birth,
-
-        parent_name=data.parent_name,
-
-        parent_phone=data.parent_phone,
 
     )
 
@@ -220,19 +236,22 @@ def create_student(
 
         "message": "Student created successfully",
 
-        "student": student,
+        "student": serialize_student(student),
 
         "login": {
 
             "email": data.email,
 
-            "temporary_password": DEFAULT_USER_PASSWORD
+            "temporary_password": temporary_password
 
         }
 
     }
-# UPDATE STUDENT
 
+
+# -------------------------
+# UPDATE STUDENT
+# -------------------------
 @router.put("/{student_id}")
 def update_student(
 
@@ -288,9 +307,13 @@ def update_student(
 
     return {
         "message": "Student updated successfully",
-        "student": student
+        "student": serialize_student(student)
     }
+
+
+# -------------------------
 # GET STUDENTS
+# -------------------------
 @router.get("/")
 def get_students(
 
@@ -353,12 +376,14 @@ def get_students(
 
         "total": total,
 
-        "data": students
+        "data": [serialize_student(s) for s in students]
 
     }
 
 
+# -------------------------
 # GET STUDENTS BY CLASS & SECTION (FOR TEACHER)
+# -------------------------
 @router.get("/teacher")
 def teacher_students(
 
@@ -400,4 +425,6 @@ def teacher_students(
 
     )
 
-    return query.all()
+    students = query.all()
+
+    return [serialize_student(s) for s in students]

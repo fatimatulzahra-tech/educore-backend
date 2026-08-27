@@ -1,4 +1,3 @@
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -40,6 +39,18 @@ router = APIRouter(
     prefix="/attendance",
     tags=["Attendance"]
 )
+
+
+def serialize_attendance(attendance: Attendance) -> dict:
+    return {
+        "id": attendance.id,
+        "school_id": attendance.school_id,
+        "teacher_id": attendance.teacher_id,
+        "enrollment_id": attendance.enrollment_id,
+        "date": attendance.date,
+        "status": attendance.status,
+        "remarks": attendance.remarks,
+    }
 
 
 # MARK ATTENDANCE
@@ -105,7 +116,7 @@ def mark_attendance(
 
     return {
         "message": "Attendance saved successfully",
-        "attendance": attendance
+        "attendance": serialize_attendance(attendance)
     }
 
 
@@ -179,7 +190,7 @@ def get_attendance(
 
         "total": total,
 
-        "data": attendance
+        "data": [serialize_attendance(a) for a in attendance]
 
     }
 
@@ -1223,7 +1234,7 @@ def my_attendance(
         Attendance.date.desc()
     ).all()
 
-    return attendance
+    return [serialize_attendance(a) for a in attendance]
 
 
 @router.get("/my-summary")
@@ -1393,7 +1404,7 @@ def my_monthly(
 
     ).all()
 
-    return attendance
+    return [serialize_attendance(a) for a in attendance]
 
 
 @router.get("/my-yearly")
@@ -1457,6 +1468,4 @@ def my_yearly(
 
     ).all()
 
-    return attendance
-
-
+    return [serialize_attendance(a) for a in attendance]

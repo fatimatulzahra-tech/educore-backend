@@ -5,7 +5,7 @@ from typing import List
 class AssignmentItem(BaseModel):
     class_id: int
     section_id: int
-    subject: str
+    subject_id: int          # was: subject: str
 
 
 class TeacherAssignmentCreate(BaseModel):
